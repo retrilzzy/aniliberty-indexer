@@ -1,0 +1,17 @@
+FROM golang:1.26-alpine
+
+RUN apk add --no-cache ca-certificates tzdata curl
+
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download
+
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+
+RUN CGO_ENABLED=0 go build -o aniliberty-indexer ./cmd/indexer/
+
+EXPOSE 3649
+
+CMD ["./aniliberty-indexer"]

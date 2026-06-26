@@ -1,0 +1,88 @@
+version: 2
+
+project_name: aniliberty-indexer
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/indexer
+    binary: aniliberty-indexer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ldflags:
+      - -s -w
+    flags:
+      - -trimpath
+    ignore:
+      - goos: windows
+        goarch: arm
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - README.md
+      - LICENSE
+      - .env.example
+      - docker-compose.yml
+
+checksum:
+  name_template: "checksums.txt"
+
+dockers_v2:
+  - images:
+      - "ghcr.io/retrilzzy/aniliberty-indexer"
+    tags:
+      - "{{ .Version }}"
+      - "latest"
+    dockerfile: Dockerfile
+    platforms:
+      - linux/amd64
+      - linux/arm64
+      - linux/arm/v7
+    labels:
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+    annotations:
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.description": "Lightweight Torznab-compatible indexer that bridges AniLiberty API with Prowlarr and Sonarr."
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.name": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: retrilzzy
+    name: aniliberty-indexer
+  prerelease: auto
+  draft: true
+  name_template: "v{{ .Version }}"
