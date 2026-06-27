@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
 // Global config
 var (
-	HOST            = ""
+	HOST            = "0.0.0.0"
 	PORT            = "3649"
 	ANILIBERTY_API  = "https://anilibria.top/api/v1"
 	ANILIBERTY_SITE = "https://anilibria.top"
@@ -27,6 +28,58 @@ var (
 	MAX_LIMIT          = 50
 	SEARCH_CONCURRENCY = 5
 )
+
+// Map of placeholders supported in TORRENT_TITLE_TEMPLATE
+var AllowedPlaceholders = map[string]struct{}{
+	"title_latin_clean": {},
+	"title_latin":       {},
+	"title_ru":          {},
+	"season":            {},
+	"episodes":          {},
+	"season_episodes":   {},
+	"year":              {},
+	"type":              {},
+	"quality":           {},
+	"codec":             {},
+}
+
+// Checks if the given template has valid placeholders and matching braces
+func ValidateTemplate(tpl string) error {
+	inBrace := false
+	var currentPlaceholder strings.Builder
+
+	for i, char := range tpl {
+		if char == '{' {
+			if inBrace {
+				return fmt.Errorf("nested braces are not allowed at position %d", i)
+			}
+			inBrace = true
+			currentPlaceholder.Reset()
+		} else if char == '}' {
+			if !inBrace {
+				return fmt.Errorf("unmatched closing brace at position %d", i)
+			}
+			inBrace = false
+			name := currentPlaceholder.String()
+			if name == "" {
+				return fmt.Errorf("empty placeholder at position %d", i-1)
+			}
+			if _, ok := AllowedPlaceholders[name]; !ok {
+				return fmt.Errorf("unknown placeholder: {%s}", name)
+			}
+		} else {
+			if inBrace {
+				currentPlaceholder.WriteRune(char)
+			}
+		}
+	}
+
+	if inBrace {
+		return fmt.Errorf("unmatched opening brace at the end of the template")
+	}
+
+	return nil
+}
 
 // HTTP client for AniLiberty upstream requests
 var HTTPClient *http.Client
@@ -53,6 +106,10 @@ func init() {
 	}
 	if t := os.Getenv("TORRENT_TITLE_TEMPLATE"); t != "" {
 		TORRENT_TITLE_TEMPLATE = t
+	}
+
+	if err := ValidateTemplate(TORRENT_TITLE_TEMPLATE); err != nil {
+		log.Fatalf("Invalid TORRENT_TITLE_TEMPLATE: %v\n", err)
 	}
 
 	transport := &http.Transport{
