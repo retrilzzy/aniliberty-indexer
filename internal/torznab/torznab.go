@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Escapes special XML characters using the standard html package
+// Escapes special XML characters
 func escapeXML(str string) string {
 	return html.EscapeString(str)
 }
@@ -240,6 +240,30 @@ func cleanFinalTitle(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
+// Replaces placeholders in the template with corresponding values
+func RenderTemplate(tpl string, getValue func(string) string) string {
+	var sb strings.Builder
+	inBrace := false
+	var currentPlaceholder strings.Builder
+
+	for _, char := range tpl {
+		if char == '{' {
+			inBrace = true
+			currentPlaceholder.Reset()
+		} else if char == '}' {
+			inBrace = false
+			sb.WriteString(getValue(currentPlaceholder.String()))
+		} else {
+			if inBrace {
+				currentPlaceholder.WriteRune(char)
+			} else {
+				sb.WriteRune(char)
+			}
+		}
+	}
+	return cleanFinalTitle(sb.String())
+}
+
 // Builds the torrent title for the Torznab feed
 func buildTitle(release api.Release, torrent api.Torrent) string {
 	ruName := release.Name.Main
@@ -269,19 +293,34 @@ func buildTitle(release api.Release, torrent api.Torrent) string {
 		seasonEpisodes += episodes
 	}
 
-	result := config.TORRENT_TITLE_TEMPLATE
-	result = strings.ReplaceAll(result, "{title_latin_clean}", cleanLatinName)
-	result = strings.ReplaceAll(result, "{season_episodes}", seasonEpisodes)
-	result = strings.ReplaceAll(result, "{title_latin}", latinName)
-	result = strings.ReplaceAll(result, "{title_ru}", ruName)
-	result = strings.ReplaceAll(result, "{season}", strconv.Itoa(season))
-	result = strings.ReplaceAll(result, "{episodes}", episodes)
-	result = strings.ReplaceAll(result, "{year}", yearStr)
-	result = strings.ReplaceAll(result, "{type}", torrent.Type.Value)
-	result = strings.ReplaceAll(result, "{quality}", torrent.Quality.Value)
-	result = strings.ReplaceAll(result, "{codec}", codecCleaned)
+	getValue := func(key string) string {
+		switch key {
+		case "title_latin_clean":
+			return cleanLatinName
+		case "season_episodes":
+			return seasonEpisodes
+		case "title_latin":
+			return latinName
+		case "title_ru":
+			return ruName
+		case "season":
+			return strconv.Itoa(season)
+		case "episodes":
+			return episodes
+		case "year":
+			return yearStr
+		case "type":
+			return torrent.Type.Value
+		case "quality":
+			return torrent.Quality.Value
+		case "codec":
+			return codecCleaned
+		default:
+			return ""
+		}
+	}
 
-	return cleanFinalTitle(result)
+	return RenderTemplate(config.TORRENT_TITLE_TEMPLATE, getValue)
 }
 
 // Writes a single <torznab:attr> element
