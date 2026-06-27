@@ -1,7 +1,3 @@
-ARG TARGETOS
-ARG TARGETARCH
-ARG TARGETVARIANT
-
 FROM alpine:3.23 AS prep
 RUN apk add --no-cache ca-certificates tzdata \
   && echo "user:x:10001:10001::/nonexistent:/sbin/nologin" > /etc/passwd.custom \
@@ -20,5 +16,4 @@ COPY --from=prep /etc/group.custom /etc/group
 COPY ${TARGETOS}/${TARGETARCH}${TARGETVARIANT:+/$TARGETVARIANT}/aniliberty-indexer /aniliberty-indexer
 
 USER user:user
-EXPOSE 3649
 ENTRYPOINT ["/aniliberty-indexer"]

@@ -5,9 +5,5 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      - HOST=${HOST:-0.0.0.0}
-      - PORT=${PORT:-3649}
-      - API_KEY=${API_KEY:-}
     ports:
       - "${PORT:-3649}:${PORT:-3649}"
