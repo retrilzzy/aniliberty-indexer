@@ -62,7 +62,7 @@ dockers_v2:
       "org.opencontainers.image.version": "{{ .Version }}"
     annotations:
       "org.opencontainers.image.title": "{{ .ProjectName }}"
-      "org.opencontainers.image.description": "Lightweight Torznab-compatible indexer that bridges AniLiberty API with Prowlarr, Sonnar and Radarr."
+      "org.opencontainers.image.description": "Lightweight Torznab-compatible indexer that bridges AniLiberty API with Prowlarr, Sonarr and Radarr."
       "org.opencontainers.image.created": "{{ .Date }}"
       "org.opencontainers.image.name": "{{ .ProjectName }}"
       "org.opencontainers.image.revision": "{{ .FullCommit }}"
