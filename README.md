@@ -36,7 +36,8 @@
 |---|---|---|
 | `HOST` | `0.0.0.0` | Адрес интерфейса, к которому привязывается сервер. |
 | `PORT` | `3649` | Внутренний порт, на котором работает сервер. |
-| `TORRENT_TITLE_TEMPLATE` | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента. [Настройка шаблона названия](#настройка-шаблона-названия). |
+| `TORRENT_TITLE_TEMPLATE` | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для сериалов. [Настройка шаблона названия](#настройка-шаблона-названия). |
+| `TORRENT_MOVIE_TITLE_TEMPLATE` | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для фильмов. [Настройка шаблона названия](#настройка-шаблона-названия). |
 | `ANILIBERTY_API` | `https://anilibria.top/api/v1` | Адрес API AniLiberty. |
 | `ANILIBERTY_SITE` | `https://anilibria.top` | Основной адрес сайта для генерации внешних ссылок на релизы. |
 | `API_KEY` | *(пусто)* | Опциональный секретный ключ для авторизации клиентов. |
@@ -66,14 +67,21 @@
    ```env
    TORRENT_TITLE_TEMPLATE="[AniLiberty] {title_latin_clean} - S{season} [RUS][{type} {quality} {codec}] ({year})"
    ```
-   Результат:
+
+   Результат для сериала:
    `[AniLiberty] Monogatari Series - S2 [RUS][BDRip 1080p x264] (2013)`
+
+   ```env
+   TORRENT_MOVIE_TITLE_TEMPLATE="[AniLiberty] {title_latin_clean} ({year}) [RUS][{type} {quality} {codec}]"
+   ```
+   Результат для фильма:
+   `[AniLiberty] Gekijouban Steins;Gate: Fuka Ryouiki no Deja vu (2013) [RUS][BDRip 1080p x264]`
 
 2. **С сериями**:
    ```env
    TORRENT_TITLE_TEMPLATE="[AniLiberty] {title_latin_clean} - {season_episodes} [RUS][{type} {quality} {codec}] ({year})"
    ```
-   Результат:
+   Результат для сериала:
    `[AniLiberty] Monogatari Series - S02E01-E23 [RUS][BDRip 1080p x264] (2013)`
 
 

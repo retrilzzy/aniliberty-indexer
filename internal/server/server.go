@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -115,9 +116,16 @@ func handleTorznab(w http.ResponseWriter, req *http.Request, query url.Values) {
 <error code="201" description="` + errMsg + `" />`))
 }
 
+var yearSuffixRegex = regexp.MustCompile(`\s+\d{4}$`)
+
 // Handles search (q= set) or browse (q= empty) and returns a Torznab XML feed
 func handleSearch(w http.ResponseWriter, query url.Values) {
 	q := query.Get("q")
+
+	if q != "" {
+		q = yearSuffixRegex.ReplaceAllString(q, "")
+	}
+
 	limit := config.DEFAULT_LIMIT
 	if l, err := strconv.Atoi(query.Get("limit")); err == nil {
 		limit = l

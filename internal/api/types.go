@@ -10,6 +10,9 @@ type Release struct {
 	} `json:"name"`
 	Year        int    `json:"year"`
 	Description string `json:"description"`
+	Type        struct {
+		Value string `json:"value"`
+	} `json:"type"`
 	Poster      struct {
 		Optimized struct {
 			Src string `json:"src"`

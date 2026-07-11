@@ -18,11 +18,14 @@ var (
 	ANILIBERTY_SITE = "https://anilibria.top"
 	API_KEY         = ""
 
-	// UPSTREAM_PROXY routes outgoing requests to AniLiberty through an HTTP/SOCKS5 proxy
+	// Routes outgoing requests to AniLiberty through an HTTP/SOCKS5 proxy
 	UPSTREAM_PROXY = ""
 
-	// TORRENT_TITLE_TEMPLATE defines the pattern for formatting torrent titles
+	// Defines the pattern for formatting torrent titles
 	TORRENT_TITLE_TEMPLATE = "[AniLiberty] {title_latin_clean} - S{season} [RUS][{type} {quality} {codec}] ({year})"
+
+	// Defines the pattern for formatting movie torrent titles
+	TORRENT_MOVIE_TITLE_TEMPLATE = "[AniLiberty] {title_latin_clean} ({year}) [RUS][{type} {quality} {codec}]"
 
 	DEFAULT_LIMIT      = 25
 	MAX_LIMIT          = 50
@@ -107,9 +110,15 @@ func init() {
 	if t := os.Getenv("TORRENT_TITLE_TEMPLATE"); t != "" {
 		TORRENT_TITLE_TEMPLATE = t
 	}
+	if t := os.Getenv("TORRENT_MOVIE_TITLE_TEMPLATE"); t != "" {
+		TORRENT_MOVIE_TITLE_TEMPLATE = t
+	}
 
 	if err := ValidateTemplate(TORRENT_TITLE_TEMPLATE); err != nil {
 		log.Fatalf("Invalid TORRENT_TITLE_TEMPLATE: %v\n", err)
+	}
+	if err := ValidateTemplate(TORRENT_MOVIE_TITLE_TEMPLATE); err != nil {
+		log.Fatalf("Invalid TORRENT_MOVIE_TITLE_TEMPLATE: %v\n", err)
 	}
 
 	transport := &http.Transport{

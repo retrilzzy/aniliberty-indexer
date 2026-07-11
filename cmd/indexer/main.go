@@ -1,12 +1,7 @@
-/**
- * AniLiberty Indexer
- *
- * Lightweight Torznab-compatible indexer that bridges
- * AniLiberty (AniLibria) API with Prowlarr and Sonarr.
- */
 package main
 
 import (
+	"aniliberty-indexer/internal/api"
 	"aniliberty-indexer/internal/config"
 	"aniliberty-indexer/internal/server"
 	"aniliberty-indexer/internal/torznab"
@@ -25,33 +20,55 @@ func main() {
 		apiKeyState = "enabled"
 	}
 
-	getValue := func(key string) string {
-		switch key {
-		case "title_latin_clean":
-			return "Monogatari Series"
-		case "title_latin":
-			return "Monogatari Series: Second Season"
-		case "title_ru":
-			return "Цикл Историй: Второй Сезон"
-		case "season":
-			return "2"
-		case "episodes":
-			return "E01-E23"
-		case "season_episodes":
-			return "S02E01-E23"
-		case "year":
-			return "2013"
-		case "type":
-			return "WEBRip"
-		case "quality":
-			return "1080p"
-		case "codec":
-			return "x264"
-		default:
-			return ""
-		}
+	tvRelease := api.Release{
+		Name: struct {
+			Main  string `json:"main"`
+			Latin string `json:"english"`
+		}{
+			Main:  "Цикл Историй: Второй Сезон",
+			Latin: "Monogatari Series: Second Season",
+		},
+		Year: 2013,
 	}
-	exampleTitle := torznab.RenderTemplate(config.TORRENT_TITLE_TEMPLATE, getValue)
+	tvTorrent := api.Torrent{
+		Type: struct {
+			Value string `json:"value"`
+		}{Value: "WEBRip"},
+		Quality: struct {
+			Value string `json:"value"`
+		}{Value: "1080p"},
+		Codec: struct {
+			Value string `json:"value"`
+		}{Value: "x264"},
+		Label: "[E01-E23]",
+	}
+	exampleTVTitle := torznab.BuildTVTitle(tvRelease, tvTorrent)
+
+	movieRelease := api.Release{
+		Name: struct {
+			Main  string `json:"main"`
+			Latin string `json:"english"`
+		}{
+			Main:  "Врата Штейна: Зона загрузки дежавю",
+			Latin: "Gekijouban Steins;Gate: Fuka Ryouiki no Deja vu",
+		},
+		Year: 2013,
+		Type: struct {
+			Value string `json:"value"`
+		}{Value: "MOVIE"},
+	}
+	movieTorrent := api.Torrent{
+		Type: struct {
+			Value string `json:"value"`
+		}{Value: "BDRip"},
+		Quality: struct {
+			Value string `json:"value"`
+		}{Value: "720p"},
+		Codec: struct {
+			Value string `json:"value"`
+		}{Value: "x265"},
+	}
+	exampleMovieTitle := torznab.BuildMovieTitle(movieRelease, movieTorrent)
 
 	log.Printf(`
 ╔═══
@@ -61,10 +78,13 @@ func main() {
 ║  API Key:        %s
 ║  Upstream proxy: %s
 ║
-║  Title Template: %s
-║  Title Example:  %s
+║  TV Template:    %s
+║  TV Example:     %s
+║
+║  Movie Template: %s
+║  Movie Example:  %s
 ╚═══
-`, displayHost, config.PORT, apiKeyState, config.PingProxy(), config.TORRENT_TITLE_TEMPLATE, exampleTitle)
+`, displayHost, config.PORT, apiKeyState, config.PingProxy(), config.TORRENT_TITLE_TEMPLATE, exampleTVTitle, config.TORRENT_MOVIE_TITLE_TEMPLATE, exampleMovieTitle)
 
 	if err := http.ListenAndServe(config.HOST+":"+config.PORT, nil); err != nil {
 		log.Fatalf("Server error: %v\n", err)
