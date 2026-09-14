@@ -157,9 +157,15 @@ func BuildTVTitle(release api.Release, torrent api.Torrent) string {
 
 	episodes := extractEpisodes(torrent.Label)
 
-	seasonEpisodes := fmt.Sprintf("S%02d", season)
+	seasonStr := fmt.Sprintf("S%02d", season)
+	seasonEpisodes := seasonStr
 	if episodes != "" {
-		seasonEpisodes += episodes
+		if strings.Contains(episodes, "-") {
+			parts := strings.SplitN(episodes, "-", 2)
+			seasonEpisodes = seasonStr + parts[0] + "-" + seasonStr + parts[1]
+		} else {
+			seasonEpisodes = seasonStr + episodes
+		}
 	}
 
 	getValue := func(key string) string {

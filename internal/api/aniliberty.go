@@ -27,7 +27,7 @@ func FetchLatestTorrents(limit int, page int) ([]CombinedItem, error) {
 	return items, nil
 }
 
-// Searches releases by query, then fetches their torrents concurrently (batches of 5)
+// Searches releases by query, then fetches their torrents concurrently
 func SearchTorrents(query string, limit int) ([]CombinedItem, error) {
 	searchUrl := fmt.Sprintf("%s/app/search/releases?query=%s", config.ANILIBERTY_API, url.QueryEscape(query))
 	var releases []Release

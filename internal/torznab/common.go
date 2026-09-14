@@ -75,14 +75,17 @@ func extractEpisodes(label string) string {
 	}
 
 	epRange := parts[0]
-	if len(epRange) > 0 && epRange[0] >= '0' && epRange[0] <= '9' {
-		if strings.Contains(epRange, "-") {
-			eps := strings.SplitN(epRange, "-", 2)
+	cleanEp := strings.TrimPrefix(strings.TrimPrefix(epRange, "E"), "e")
+	if len(cleanEp) > 0 && cleanEp[0] >= '0' && cleanEp[0] <= '9' {
+		if strings.Contains(cleanEp, "-") {
+			eps := strings.SplitN(cleanEp, "-", 2)
 			if len(eps) == 2 {
-				return "E" + padZero(eps[0]) + "-E" + padZero(eps[1])
+				e0 := strings.TrimPrefix(strings.TrimPrefix(eps[0], "E"), "e")
+				e1 := strings.TrimPrefix(strings.TrimPrefix(eps[1], "E"), "e")
+				return "E" + padZero(e0) + "-E" + padZero(e1)
 			}
 		} else {
-			return "E" + padZero(epRange)
+			return "E" + padZero(cleanEp)
 		}
 	}
 	return ""

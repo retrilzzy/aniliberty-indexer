@@ -2,6 +2,9 @@ package torznab
 
 import (
 	"testing"
+
+	"aniliberty-indexer/internal/api"
+	"aniliberty-indexer/internal/config"
 )
 
 func TestExtractEpisodes(t *testing.T) {
@@ -134,6 +137,53 @@ func TestCleanFinalTitle(t *testing.T) {
 		got := cleanFinalTitle(tc.input)
 		if got != tc.expected {
 			t.Errorf("cleanFinalTitle(%q) = %q; expected %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
+func TestBuildTVTitleSeasonEpisodes(t *testing.T) {
+	origTpl := config.TORRENT_TITLE_TEMPLATE
+	defer func() { config.TORRENT_TITLE_TEMPLATE = origTpl }()
+
+	config.TORRENT_TITLE_TEMPLATE = "[AniLiberty] {title_latin_clean} - {season_episodes} [RUS][{type} {quality} {codec}] ({year})"
+
+	release := api.Release{
+		Name: struct {
+			Main  string `json:"main"`
+			Latin string `json:"english"`
+		}{
+			Main:  "Цикл Историй: Второй Сезон",
+			Latin: "Monogatari Series: Second Season",
+		},
+		Year: 2013,
+	}
+
+	tests := []struct {
+		label    string
+		expected string
+	}{
+		{"[E01-E23]", "[AniLiberty] Monogatari Series - S02E01-S02E23 [RUS][WEBRip 1080p x264] (2013)"},
+		{"[05]", "[AniLiberty] Monogatari Series - S02E05 [RUS][WEBRip 1080p x264] (2013)"},
+		{"", "[AniLiberty] Monogatari Series - S02 [RUS][WEBRip 1080p x264] (2013)"},
+	}
+
+	for _, tc := range tests {
+		torrent := api.Torrent{
+			Type: struct {
+				Value string `json:"value"`
+			}{Value: "WEBRip"},
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+			Codec: struct {
+				Value string `json:"value"`
+			}{Value: "x264"},
+			Label: tc.label,
+		}
+
+		got := BuildTVTitle(release, torrent)
+		if got != tc.expected {
+			t.Errorf("BuildTVTitle with label %q = %q; expected %q", tc.label, got, tc.expected)
 		}
 	}
 }
