@@ -160,7 +160,7 @@ func BuildCapsXML() string {
 <limits max="50" default="25" />
 <searching>
 <search available="yes" supportedParams="q" />
-<tv-search available="yes" supportedParams="q" />
+<tv-search available="yes" supportedParams="q,season,ep" />
 <movie-search available="yes" supportedParams="q" />
 </searching>
 <categories>
