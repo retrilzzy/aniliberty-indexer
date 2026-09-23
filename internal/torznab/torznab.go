@@ -50,12 +50,20 @@ func BuildTorznabXML(items []api.CombinedItem) string {
 
 		res := qualityToResolution(torrent.Quality.Value)
 
+		var season int
+		var epAttr string
+
 		if isMovie {
 			title = BuildMovieTitle(release, torrent)
 			cats = resolutionToMovieCategories(res)
 		} else {
 			title = BuildTVTitle(release, torrent)
 			cats = resolutionToTVCategories(res)
+			season = extractSeason(release.Name.Latin)
+			if season == 1 && extractSeason(release.Name.Main) > 1 {
+				season = extractSeason(release.Name.Main)
+			}
+			epAttr = parseEpisodeAttr(extractEpisodes(torrent.Label))
 		}
 
 		hash := torrent.Hash
@@ -145,6 +153,18 @@ func BuildTorznabXML(items []api.CombinedItem) string {
 			writeTorznabAttr(&sb, "poster", escapeXML(posterUrl))
 		}
 
+		if release.Year > 0 {
+			writeTorznabAttr(&sb, "year", release.Year)
+		}
+		if !isMovie {
+			if season > 0 {
+				writeTorznabAttr(&sb, "season", season)
+			}
+			if epAttr != "" {
+				writeTorznabAttr(&sb, "episode", epAttr)
+			}
+		}
+
 		sb.WriteString("</item>\n")
 	}
 
@@ -169,6 +189,7 @@ func BuildCapsXML() string {
 <subcat id="2040" name="Movies/HD" />
 <subcat id="2045" name="Movies/UHD" />
 <subcat id="2050" name="Movies/BluRay" />
+<subcat id="2070" name="Movies/Anime" />
 </category>
 <category id="5000" name="TV">
 <subcat id="5030" name="TV/SD" />

@@ -1,6 +1,7 @@
 package torznab
 
 import (
+	"strings"
 	"testing"
 
 	"aniliberty-indexer/internal/api"
@@ -185,5 +186,179 @@ func TestBuildTVTitleSeasonEpisodes(t *testing.T) {
 		if got != tc.expected {
 			t.Errorf("BuildTVTitle with label %q = %q; expected %q", tc.label, got, tc.expected)
 		}
+	}
+}
+
+func TestBuildCapsXML(t *testing.T) {
+	caps := BuildCapsXML()
+	expectedItems := []string{
+		`<tv-search available="yes" supportedParams="q,season,ep" />`,
+		`<movie-search available="yes" supportedParams="q" />`,
+		`<subcat id="2070" name="Movies/Anime" />`,
+		`<subcat id="5070" name="TV/Anime" />`,
+	}
+	for _, expected := range expectedItems {
+		if !strings.Contains(caps, expected) {
+			t.Errorf("BuildCapsXML() does not contain expected element: %s", expected)
+		}
+	}
+}
+
+func TestParseEpisodeAttr(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"E05", "5"},
+		{"E12", "12"},
+		{"E01-E24", "1-24"},
+		{"E01-E12", "1-12"},
+		{"", ""},
+	}
+	for _, tc := range tests {
+		got := parseEpisodeAttr(tc.input)
+		if got != tc.expected {
+			t.Errorf("parseEpisodeAttr(%q) = %q; expected %q", tc.input, got, tc.expected)
+		}
+	}
+}
+
+func TestBuildTorznabXMLAttrs(t *testing.T) {
+	tvItem := api.CombinedItem{
+		Release: api.Release{
+			ID: 1,
+			Name: struct {
+				Main  string `json:"main"`
+				Latin string `json:"english"`
+			}{
+				Main:  "Магическая битва 2",
+				Latin: "Jujutsu Kaisen 2nd Season",
+			},
+			Year: 2023,
+		},
+		Torrent: api.Torrent{
+			Hash:  "abc123hash",
+			Label: "[WEBRip 1080p][05]",
+			Size:  1234567,
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+			Codec: struct {
+				Value string `json:"value"`
+			}{Value: "x264"},
+		},
+	}
+
+	xmlOutput := BuildTorznabXML([]api.CombinedItem{tvItem})
+
+	expectedAttrs := []string{
+		`<torznab:attr name="year" value="2023" />`,
+		`<torznab:attr name="season" value="2" />`,
+		`<torznab:attr name="episode" value="5" />`,
+	}
+	for _, attr := range expectedAttrs {
+		if !strings.Contains(xmlOutput, attr) {
+			t.Errorf("BuildTorznabXML() missing expected attr %q in:\n%s", attr, xmlOutput)
+		}
+	}
+}
+
+func TestFilterItems(t *testing.T) {
+	movieItem := api.CombinedItem{
+		Release: api.Release{
+			Name: struct {
+				Main  string `json:"main"`
+				Latin string `json:"english"`
+			}{Main: "Фильм", Latin: "Movie"},
+			Type: struct {
+				Value string `json:"value"`
+			}{Value: "MOVIE"},
+		},
+		Torrent: api.Torrent{
+			Label: "[BDRip 1080p]",
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+		},
+	}
+
+	tvS1E05 := api.CombinedItem{
+		Release: api.Release{
+			Name: struct {
+				Main  string `json:"main"`
+				Latin string `json:"english"`
+			}{Main: "Сериал", Latin: "Series S1"},
+			Type: struct {
+				Value string `json:"value"`
+			}{Value: "SERIES"},
+		},
+		Torrent: api.Torrent{
+			Label: "[WEBRip 1080p][05]",
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+		},
+	}
+
+	tvS1E12 := api.CombinedItem{
+		Release: api.Release{
+			Name: struct {
+				Main  string `json:"main"`
+				Latin string `json:"english"`
+			}{Main: "Сериал", Latin: "Series S1"},
+			Type: struct {
+				Value string `json:"value"`
+			}{Value: "SERIES"},
+		},
+		Torrent: api.Torrent{
+			Label: "[WEBRip 1080p][12]",
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+		},
+	}
+
+	tvS2Batch := api.CombinedItem{
+		Release: api.Release{
+			Name: struct {
+				Main  string `json:"main"`
+				Latin string `json:"english"`
+			}{Main: "Сериал 2", Latin: "Series Season 2"},
+			Type: struct {
+				Value string `json:"value"`
+			}{Value: "SERIES"},
+		},
+		Torrent: api.Torrent{
+			Label: "[WEBRip 1080p][01-12]",
+			Quality: struct {
+				Value string `json:"value"`
+			}{Value: "1080p"},
+		},
+	}
+
+	allItems := []api.CombinedItem{movieItem, tvS1E05, tvS1E12, tvS2Batch}
+
+	// Filter by category: only movies (2000)
+	movieFiltered := FilterItems(allItems, FilterOptions{Categories: []int{2000}})
+	if len(movieFiltered) != 1 || movieFiltered[0].Release.Type.Value != "MOVIE" {
+		t.Errorf("expected 1 movie item, got %d", len(movieFiltered))
+	}
+
+	// Filter by season: season 2
+	s2Filtered := FilterItems(allItems, FilterOptions{Season: 2})
+	if len(s2Filtered) != 1 || s2Filtered[0].Torrent.Label != "[WEBRip 1080p][01-12]" {
+		t.Errorf("expected 1 item for season 2, got %d", len(s2Filtered))
+	}
+
+	// Filter by episode: episode 5 in season 1
+	ep5Filtered := FilterItems(allItems, FilterOptions{Season: 1, Episode: 5})
+	if len(ep5Filtered) != 1 || ep5Filtered[0].Torrent.Label != "[WEBRip 1080p][05]" {
+		t.Errorf("expected only episode 5 for season 1, got %d", len(ep5Filtered))
+	}
+
+	// Filter by episode: episode 5 in season 2 (should match batch 01-12)
+	s2Ep5Filtered := FilterItems(allItems, FilterOptions{Season: 2, Episode: 5})
+	if len(s2Ep5Filtered) != 1 || s2Ep5Filtered[0].Torrent.Label != "[WEBRip 1080p][01-12]" {
+		t.Errorf("expected batch 01-12 to match season 2 episode 5, got %d", len(s2Ep5Filtered))
 	}
 }

@@ -24,7 +24,7 @@ func HandleRequest(w http.ResponseWriter, req *http.Request) {
 	if pathname == "/" || pathname == "/health" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok","name":"AniLiberty Indexer","version":"1.0.0"}`))
+		w.Write([]byte(`{"status":"ok","name":"AniLiberty Indexer"}`))
 		return
 	}
 
@@ -101,26 +101,38 @@ func handleTorznab(w http.ResponseWriter, req *http.Request, query url.Values) {
 		return
 	}
 
-	if t == "search" || t == "tvsearch" || t == "movie" {
-		handleSearch(w, query)
+	if t == "" || t == "browse" || t == "search" || t == "tvsearch" || t == "tv" || t == "movie" || t == "movie-search" || t == "moviesearch" {
+		handleSearch(w, req, query)
 		return
 	}
 
 	errMsg := "Unknown Torznab action"
-	if t == "" {
-		errMsg = "Missing required parameter: t"
-	}
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
 	w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
 <error code="201" description="` + errMsg + `" />`))
 }
 
+// Parses comma-separated category IDs from cat query parameters
+func parseCategories(query url.Values) []int {
+	var cats []int
+	for _, val := range query["cat"] {
+		for _, part := range strings.Split(val, ",") {
+			part = strings.TrimSpace(part)
+			if c, err := strconv.Atoi(part); err == nil {
+				cats = append(cats, c)
+			}
+		}
+	}
+	return cats
+}
+
 var yearSuffixRegex = regexp.MustCompile(`\s+\d{4}$`)
 
 // Handles search (q= set) or browse (q= empty) and returns a Torznab XML feed
-func handleSearch(w http.ResponseWriter, query url.Values) {
+func handleSearch(w http.ResponseWriter, req *http.Request, query url.Values) {
 	q := query.Get("q")
+	t := strings.ToLower(query.Get("t"))
 
 	if q != "" {
 		q = yearSuffixRegex.ReplaceAllString(q, "")
@@ -138,12 +150,32 @@ func handleSearch(w http.ResponseWriter, query url.Values) {
 		offset = o
 	}
 
+	cats := parseCategories(query)
+	if len(cats) == 0 && (t == "movie" || t == "movie-search" || t == "moviesearch") {
+		cats = []int{2000, 2030, 2040, 2045, 2050, 2070}
+	}
+
+	var season int
+	if s, err := strconv.Atoi(query.Get("season")); err == nil {
+		season = s
+	}
+	var ep int
+	if e, err := strconv.Atoi(query.Get("ep")); err == nil {
+		ep = e
+	}
+
+	hasFilter := len(cats) > 0 || season > 0 || ep > 0
+
 	var items []api.CombinedItem
 	var err error
 
 	if q != "" {
-		log.Printf("[search] query=\"%s\" limit=%d\n", q, limit)
-		items, err = api.SearchTorrents(q, limit)
+		searchLimit := limit
+		if hasFilter && searchLimit < config.MAX_LIMIT*2 {
+			searchLimit = config.MAX_LIMIT * 2
+		}
+		log.Printf("[search] query=\"%s\" limit=%d\n", q, searchLimit)
+		items, err = api.SearchTorrents(q, searchLimit)
 	} else {
 		page := 1
 		if limit > 0 {
@@ -160,6 +192,18 @@ func handleSearch(w http.ResponseWriter, query url.Values) {
 		log.Printf("[error] %v\n", err)
 		http.Error(w, fmt.Sprintf("Internal Server Error: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	if hasFilter {
+		items = torznab.FilterItems(items, torznab.FilterOptions{
+			Categories: cats,
+			Season:     season,
+			Episode:    ep,
+		})
+	}
+
+	if len(items) > limit {
+		items = items[:limit]
 	}
 
 	xmlResponse := torznab.BuildTorznabXML(items)

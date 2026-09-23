@@ -1,7 +1,9 @@
 package torznab
 
 import (
+	"fmt"
 	"html"
+	"strconv"
 	"strings"
 )
 
@@ -89,6 +91,26 @@ func extractEpisodes(label string) string {
 		}
 	}
 	return ""
+}
+
+// Converts extracted episodes format to Torznab attribute value
+func parseEpisodeAttr(episodes string) string {
+	if episodes == "" {
+		return ""
+	}
+	if strings.Contains(episodes, "-") {
+		parts := strings.SplitN(episodes, "-", 2)
+		n1, err1 := strconv.Atoi(strings.TrimPrefix(parts[0], "E"))
+		n2, err2 := strconv.Atoi(strings.TrimPrefix(parts[1], "E"))
+		if err1 == nil && err2 == nil {
+			return fmt.Sprintf("%d-%d", n1, n2)
+		}
+		return strings.ReplaceAll(episodes, "E", "")
+	}
+	if n, err := strconv.Atoi(strings.TrimPrefix(episodes, "E")); err == nil {
+		return strconv.Itoa(n)
+	}
+	return strings.TrimPrefix(episodes, "E")
 }
 
 // Cleans up empty or malformed bracket sequences and spaces
