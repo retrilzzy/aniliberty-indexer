@@ -362,3 +362,42 @@ func TestFilterItems(t *testing.T) {
 		t.Errorf("expected batch 01-12 to match season 2 episode 5, got %d", len(s2Ep5Filtered))
 	}
 }
+
+func TestBuildTorznabXMLProxyDownloads(t *testing.T) {
+	origProxy := config.PROXY_DOWNLOADS
+	origApiKey := config.API_KEY
+	defer func() {
+		config.PROXY_DOWNLOADS = origProxy
+		config.API_KEY = origApiKey
+	}()
+
+	item := api.CombinedItem{
+		Release: api.Release{ID: 1},
+		Torrent: api.Torrent{Hash: "abc123hash"},
+	}
+
+	// Default: direct URL
+	config.PROXY_DOWNLOADS = false
+	xmlDefault := BuildTorznabXML([]api.CombinedItem{item}, "http://localhost:3649")
+	if !strings.Contains(xmlDefault, "anilibria.top/api/v1/anime/torrents/abc123hash/file") {
+		t.Errorf("expected direct download URL by default, got:\n%s", xmlDefault)
+	}
+
+	// PROXY_DOWNLOADS = true, no API key
+	config.PROXY_DOWNLOADS = true
+	config.API_KEY = ""
+	xmlProxy := BuildTorznabXML([]api.CombinedItem{item}, "http://localhost:3649")
+	expectedUrl := `url="http://localhost:3649/download/abc123hash"`
+	if !strings.Contains(xmlProxy, expectedUrl) {
+		t.Errorf("expected local proxy download URL %q, got:\n%s", expectedUrl, xmlProxy)
+	}
+
+	// PROXY_DOWNLOADS = true, with API key
+	config.API_KEY = "mysecret"
+	xmlProxyKey := BuildTorznabXML([]api.CombinedItem{item}, "http://localhost:3649")
+	expectedKeyUrl := `url="http://localhost:3649/download/abc123hash?apikey=mysecret"`
+	if !strings.Contains(xmlProxyKey, expectedKeyUrl) {
+		t.Errorf("expected local proxy download URL with apikey %q, got:\n%s", expectedKeyUrl, xmlProxyKey)
+	}
+}
+

@@ -206,7 +206,20 @@ func handleSearch(w http.ResponseWriter, req *http.Request, query url.Values) {
 		items = items[:limit]
 	}
 
-	xmlResponse := torznab.BuildTorznabXML(items)
+	baseURL := config.BASE_URL
+	if baseURL == "" && req != nil {
+		scheme := "http"
+		if req.TLS != nil || req.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		host := req.Host
+		if host == "" {
+			host = config.HOST + ":" + config.PORT
+		}
+		baseURL = scheme + "://" + host
+	}
+
+	xmlResponse := torznab.BuildTorznabXML(items, baseURL)
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(xmlResponse))

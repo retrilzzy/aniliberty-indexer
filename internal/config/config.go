@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -30,6 +31,11 @@ var (
 	DEFAULT_LIMIT      = 25
 	MAX_LIMIT          = 50
 	SEARCH_CONCURRENCY = 5
+
+	// When true, rewrites torrent download URLs to the local /download/{hash} endpoint
+	PROXY_DOWNLOADS = false
+	// Base URL for the indexer, used for local download URLs
+	BASE_URL = ""
 )
 
 // Map of placeholders supported in TORRENT_TITLE_TEMPLATE
@@ -112,6 +118,14 @@ func init() {
 	}
 	if t := os.Getenv("TORRENT_MOVIE_TITLE_TEMPLATE"); t != "" {
 		TORRENT_MOVIE_TITLE_TEMPLATE = t
+	}
+	if p := os.Getenv("PROXY_DOWNLOADS"); p != "" {
+		if val, err := strconv.ParseBool(p); err == nil {
+			PROXY_DOWNLOADS = val
+		}
+	}
+	if b := os.Getenv("BASE_URL"); b != "" {
+		BASE_URL = strings.TrimRight(b, "/")
 	}
 
 	if err := ValidateTemplate(TORRENT_TITLE_TEMPLATE); err != nil {

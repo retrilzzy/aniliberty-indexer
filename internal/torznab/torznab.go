@@ -5,6 +5,7 @@ import (
 	"aniliberty-indexer/internal/config"
 
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -29,7 +30,12 @@ func writeTorznabAttr(sb *strings.Builder, name string, value interface{}) {
 }
 
 // Builds the Torznab RSS feed XML from a list of items
-func BuildTorznabXML(items []api.CombinedItem) string {
+func BuildTorznabXML(items []api.CombinedItem, baseURL ...string) string {
+	currentBaseURL := config.BASE_URL
+	if len(baseURL) > 0 && baseURL[0] != "" {
+		currentBaseURL = strings.TrimRight(baseURL[0], "/")
+	}
+
 	var sb strings.Builder
 
 	sb.WriteString(fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
@@ -75,6 +81,12 @@ func BuildTorznabXML(items []api.CombinedItem) string {
 
 		detailsUrl := config.ANILIBERTY_SITE + "/anime/releases/release/" + releaseAlias
 		downloadUrl := config.ANILIBERTY_API + "/anime/torrents/" + hash + "/file"
+		if config.PROXY_DOWNLOADS && currentBaseURL != "" {
+			downloadUrl = fmt.Sprintf("%s/download/%s", currentBaseURL, hash)
+			if config.API_KEY != "" {
+				downloadUrl += "?apikey=" + url.QueryEscape(config.API_KEY)
+			}
+		}
 		magnetUrl := torrent.Magnet
 
 		pubDate := time.Now().UTC().Format(time.RFC1123)
