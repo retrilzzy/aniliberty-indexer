@@ -40,16 +40,18 @@
 
 ## Переменные окружения
 
-| Переменная                     | По умолчанию                      | Описание                                                                                                                     |
-| ------------------------------ | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `HOST`                         | `0.0.0.0`                         | Адрес интерфейса, к которому привязывается сервер.                                                                           |
-| `PORT`                         | `3649`                            | Внутренний порт, на котором работает сервер.                                                                                 |
-| `TORRENT_TITLE_TEMPLATE`       | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для сериалов. [Настройка шаблона названия](#настройка-шаблона-названия). |
-| `TORRENT_MOVIE_TITLE_TEMPLATE` | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для фильмов. [Настройка шаблона названия](#настройка-шаблона-названия).  |
-| `ANILIBERTY_API`               | `https://anilibria.top/api/v1`    | Адрес API AniLiberty.                                                                                                        |
-| `ANILIBERTY_SITE`              | `https://anilibria.top`           | Основной адрес сайта для генерации внешних ссылок на релизы.                                                                 |
-| `API_KEY`                      | _(пусто)_                         | Опциональный секретный ключ для авторизации клиентов.                                                                        |
-| `UPSTREAM_PROXY`               | _(пусто)_                         | Опциональный URL прокси-сервера (HTTP, HTTPS, SOCKS5) для запросов к AniLiberty API.                                         |
+| Переменная                     | По умолчанию                      | Описание                                                                                                                                                       |
+| ------------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HOST`                         | `0.0.0.0`                         | Адрес интерфейса, к которому привязывается сервер.                                                                                                             |
+| `PORT`                         | `3649`                            | Внутренний порт, на котором работает сервер.                                                                                                                   |
+| `TORRENT_TITLE_TEMPLATE`       | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для сериалов. [Настройка шаблона названия](#настройка-шаблона-названия).                                   |
+| `TORRENT_MOVIE_TITLE_TEMPLATE` | [Примеры](#примеры-использования) | Кастомный шаблон для формирования названия торрента для фильмов. [Настройка шаблона названия](#настройка-шаблона-названия).                                    |
+| `ANILIBERTY_API`               | `https://anilibria.top/api/v1`    | Адрес API AniLiberty.                                                                                                                                          |
+| `ANILIBERTY_SITE`              | `https://anilibria.top`           | Основной адрес сайта для генерации внешних ссылок на релизы.                                                                                                   |
+| `API_KEY`                      | _(пусто)_                         | Опциональный секретный ключ для авторизации клиентов (например, `my_secret_token_123`).                                                                        |
+| `UPSTREAM_PROXY`               | _(пусто)_                         | Опциональный URL прокси-сервера (HTTP, HTTPS, SOCKS5) для запросов к AniLiberty API (например, `socks5://127.0.0.1:1080` или `http://proxy.local:8080`).       |
+| `PROXY_DOWNLOADS`              | `false`                           | Проксировать ссылки скачивания торрентов через локальный эндпоинт `/download/{hash}` (`true`/`false`).                                                         |
+| `BASE_URL`                     | _(пусто)_                         | Базовый публичный URL индексатора (например, `https://aniliberty-indexer.domain.com` или `http://192.168.1.50:3649`), используется при `PROXY_DOWNLOADS=true`. |
 
 ## Настройка шаблона названия
 
@@ -211,9 +213,9 @@ GET /
 
   ```http
   HTTP/1.1 200 OK
-  Content-Type: text/plain; charset=utf-8
+  Content-Type: application/json
 
-  OK
+  {"status":"ok","name":"AniLiberty Indexer"}
   ```
 
 ### 2. Torznab Capabilities
@@ -242,16 +244,27 @@ Content-Type: application/xml; charset=utf-8
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <caps>
-  <server version="1.0" title="AniLiberty"/>
+  <server version="1.0" title="AniLiberty Indexer"/>
   <limits max="50" default="25"/>
   <searching>
     <search available="yes" supportedParams="q"/>
     <tv-search available="yes" supportedParams="q,season,ep"/>
-    <movie available="yes" supportedParams="q"/>
+    <movie-search available="yes" supportedParams="q"/>
   </searching>
   <categories>
-    <category id="5000" name="TV"/>
-    <category id="5070" name="TV/Anime"/>
+    <category id="2000" name="Movies">
+      <subcat id="2030" name="Movies/SD"/>
+      <subcat id="2040" name="Movies/HD"/>
+      <subcat id="2045" name="Movies/UHD"/>
+      <subcat id="2050" name="Movies/BluRay"/>
+      <subcat id="2070" name="Movies/Anime"/>
+    </category>
+    <category id="5000" name="TV">
+      <subcat id="5030" name="TV/SD"/>
+      <subcat id="5040" name="TV/HD"/>
+      <subcat id="5045" name="TV/UHD"/>
+      <subcat id="5070" name="TV/Anime"/>
+    </category>
   </categories>
 </caps>
 ```
@@ -272,8 +285,11 @@ _(Поддерживаются также алиасы: `/torznab`, `/torznab/ap
 | -------- | --------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `t`      | `string`  | Не задан     | Тип поиска: `search`, `tvsearch`, `movie` (если не задан — режим Browse)                                                                                     |
 | `q`      | `string`  | Не задан     | Поисковый запрос.<br>• **Задан**: поиск по релизу в API AniLiberty с параллельной загрузкой торрентов.<br>• **Отсутствует**: возвращает ленту свежих раздач. |
+| `cat`    | `string`  | Не задан     | Категории через запятую (например, `5070` или `2000,2070`)                                                                                                   |
+| `season` | `integer` | Не задан     | Номер сезона для `tvsearch` (например, `1`, `2`)                                                                                                             |
+| `ep`     | `integer` | Не задан     | Номер серии для `tvsearch` (например, `5`)                                                                                                                   |
 | `limit`  | `integer` | `25`         | Количество результатов на страницу (максимум `50`)                                                                                                           |
-| `offset` | `integer` | `1`          | Страница (смещение) для пагинации                                                                                                                            |
+| `offset` | `integer` | `0`          | Количество пропускаемых записей (смещение) для пагинации                                                                                                     |
 
 #### Пример ответа (`200 OK`)
 
@@ -308,6 +324,8 @@ Content-Type: application/xml; charset=utf-8
             <torznab:attr name="uploadvolumefactor" value="1"/>
             <torznab:attr name="resolution" value="1080"/>
             <torznab:attr name="poster" value="/storage/releases/posters/8424/Pt0yaatoRpp2adNWT8CZgYkWmzyLo1kQ.webp"/>
+            <torznab:attr name="year" value="2019"/>
+            <torznab:attr name="season" value="1"/>
         </item>
     </channel>
 </rss>
